@@ -17,6 +17,7 @@ export class PrismaDocumentRepository implements IDocumentRepository {
         ticketId: data.ticketId,
         version: data.version,
         isLatest: data.isLatest,
+        extractedText: data.extractedText,
       },
     });
 

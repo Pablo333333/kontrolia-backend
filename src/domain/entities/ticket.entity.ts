@@ -12,11 +12,21 @@ export class Ticket {
   description?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  locationLabel?: string | null;
   workflowStateId: string;
   categoryId: string;
   userId: string;
   priority: 'BAJA' | 'MEDIA' | 'URGENTE';
   isArchived: boolean;
+  destinatarioId?: string | null;
+  messageType?: string | null;
+  tramiteSubtype?: string | null;
+  responseUrgency?: string | null;
+  fechaLimite?: Date | null;
+  parentTicketId?: string | null;
+  rootTicketId?: string | null;
+  isContinuation?: boolean;
+  workGroupId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 
@@ -26,5 +36,6 @@ export class Ticket {
   comments?: Comment[];
   statusName?: string | null;
   categoryName?: string | null;
-  userName?: string | null;
+  destinatarioName?: string | null;
+  remitenteName?: string | null;
 }

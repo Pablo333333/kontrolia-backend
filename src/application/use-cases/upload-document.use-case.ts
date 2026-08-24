@@ -9,7 +9,7 @@ export class UploadDocumentUseCase {
     private readonly documentRepository: IDocumentRepository,
   ) {}
 
-  async execute(data: { name: string; url: string; type: string; userId: string; ticketId: string; version?: number; isLatest?: boolean }): Promise<Document> {
+  async execute(data: { name: string; url: string; type: string; userId: string; ticketId: string; version?: number; isLatest?: boolean; extractedText?: string }): Promise<Document> {
     return this.documentRepository.create({
       name: data.name,
       url: data.url,
@@ -18,6 +18,7 @@ export class UploadDocumentUseCase {
       ticketId: data.ticketId,
       version: data.version || 1,
       isLatest: data.isLatest ?? true,
+      extractedText: data.extractedText,
     });
   }
 }

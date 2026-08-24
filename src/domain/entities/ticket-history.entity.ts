@@ -6,11 +6,14 @@ export class TicketHistory {
   userId: string;
   timestamp: Date;
 
-  // Campos adicionales para la vista
   user?: {
     name: string | null;
     email: string;
   };
+
+  oldStateName?: string;
+  newStateName?: string;
+  userName?: string;
 
   constructor(props: Partial<TicketHistory>) {
     Object.assign(this, props);

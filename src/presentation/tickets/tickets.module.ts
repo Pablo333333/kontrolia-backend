@@ -1,6 +1,11 @@
 import { Module } from '@nestjs/common';
 import { TicketsController } from './tickets.controller';
 import { CreateTicketUseCase } from '../../application/use-cases/create-ticket.use-case';
+import { DraftSmartDocumentUseCase } from '../../application/use-cases/draft-smart-document.use-case';
+import { SaveSmartDocumentUseCase } from '../../application/use-cases/save-smart-document.use-case';
+import { OpenTicketUseCase } from '../../application/use-cases/open-ticket.use-case';
+import { CloseTicketUseCase } from '../../application/use-cases/close-ticket.use-case';
+import { TicketWorkflowService } from '../../application/services/ticket-workflow.service';
 import { ChangeTicketStateUseCase } from '../../application/use-cases/change-ticket-state.use-case';
 import { UploadDocumentUseCase } from '../../application/use-cases/upload-document.use-case';
 import { GetTicketDocumentsUseCase } from '../../application/use-cases/get-ticket-documents.use-case';
@@ -31,6 +36,11 @@ import { CloudinaryService } from '../../infrastructure/documents/cloudinary.ser
     CloudinaryService,
     CreateTicketUseCase,
     ChangeTicketStateUseCase,
+    OpenTicketUseCase,
+    CloseTicketUseCase,
+    TicketWorkflowService,
+    DraftSmartDocumentUseCase,
+    SaveSmartDocumentUseCase,
     UploadDocumentUseCase,
     GetTicketDocumentsUseCase,
     CreateCommentUseCase,

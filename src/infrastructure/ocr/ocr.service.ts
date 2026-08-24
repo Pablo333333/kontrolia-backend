@@ -8,7 +8,6 @@ export class OcrService {
   private readonly logger = new Logger(OcrService.name);
 
   async extractText(filePath: string): Promise<string> {
-    // Asegurarse de que la ruta sea absoluta si es relativa
     const absolutePath = filePath.startsWith('/') || filePath.includes(':') 
       ? filePath 
       : join(process.cwd(), filePath);
@@ -22,13 +21,33 @@ export class OcrService {
       this.logger.log(`Iniciando OCR para: ${absolutePath}`);
       const { data: { text } } = await Tesseract.recognize(
         absolutePath,
-        'spa', // Idioma español
+        'spa',
         { logger: m => this.logger.debug(m) }
       );
       this.logger.log(`OCR completado con éxito.`);
       return text;
     } catch (error) {
       this.logger.error(`Error durante el proceso de OCR: ${error.message}`);
+      return '';
+    }
+  }
+
+  async extractTextFromUrl(url: string): Promise<string> {
+    try {
+      this.logger.log(`Iniciando OCR remoto para: ${url}`);
+      const response = await fetch(url);
+      if (!response.ok) {
+        this.logger.error(`No se pudo descargar archivo para OCR: ${response.status}`);
+        return '';
+      }
+
+      const buffer = Buffer.from(await response.arrayBuffer());
+      const { data: { text } } = await Tesseract.recognize(buffer, 'spa', {
+        logger: m => this.logger.debug(m),
+      });
+      return text;
+    } catch (error) {
+      this.logger.error(`Error durante OCR remoto: ${error.message}`);
       return '';
     }
   }

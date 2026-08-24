@@ -31,8 +31,36 @@ export class AiService {
     const urgentWords = ['urgente', 'peligro', 'rotura', 'emergencia', 'inmediato', 'crítico'];
     const lowerText = text.toLowerCase();
     
-    const isUrgent = urgentWords.some(word => lowerText.includes(urgentWords.find(w => lowerText.includes(w)) || ''));
+    const isUrgent = urgentWords.some(word => lowerText.includes(word));
     
     return isUrgent ? 'ALTA' : 'BAJA';
+  }
+
+  async draftFormalDocument(baseDraft: string, metadata: Record<string, unknown>): Promise<string> {
+    if (!process.env.OPENAI_API_KEY) {
+      return baseDraft;
+    }
+
+    try {
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: 'system',
+            content:
+              'Eres un asistente de redacción formal para comunicaciones institucionales. ' +
+              'Estructura el borrador en español con encabezado, cuerpo y cierre. Mantén los datos factuales.',
+          },
+          {
+            role: 'user',
+            content: `Metadatos: ${JSON.stringify(metadata)}\n\nBorrador base:\n${baseDraft}`,
+          },
+        ],
+      });
+
+      return response.choices[0].message.content || baseDraft;
+    } catch {
+      return baseDraft;
+    }
   }
 }

@@ -4,12 +4,14 @@ import * as handlebars from 'handlebars';
 import * as puppeteer from 'puppeteer';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 
 @Injectable()
 export class GenerateDocumentUseCase {
   constructor(
     @Inject(ITicketRepository)
     private readonly ticketRepository: ITicketRepository,
+    private readonly prisma: PrismaService,
   ) {}
 
   async execute(ticketId: string): Promise<Buffer> {
@@ -19,23 +21,29 @@ export class GenerateDocumentUseCase {
       throw new NotFoundException('Ticket not found');
     }
 
-    // Cargar y compilar la plantilla
+    const team = await this.prisma.teamSettings.findFirst();
+
     const templatePath = join(__dirname, '..', '..', 'infrastructure', 'documents', 'templates', 'ticket-report.hbs');
     const templateSource = readFileSync(templatePath, 'utf8');
     const template = handlebars.compile(templateSource);
 
-    // Preparar datos para la plantilla
     const data = {
       id: ticket.id,
       title: ticket.title,
       description: ticket.description,
       categoryName: ticket.categoryName,
       statusName: ticket.statusName,
+      priority: (ticket as any).priority || 'BAJA',
       latitude: ticket.latitude,
       longitude: ticket.longitude,
-      hasLocation: !!(ticket.latitude && ticket.longitude),
-      currentDate: new Date().toLocaleString(),
-      userName: 'Sistema KONTROLIA', // Podríamos pasar el nombre del usuario autenticado
+      locationLabel: (ticket as any).locationLabel,
+      hasLocation: !!((ticket as any).locationLabel || (ticket.latitude && ticket.longitude)),
+      currentDate: new Date().toLocaleString('es-PE'),
+      userName: (ticket as any).remitenteName || 'Sistema',
+      organizationName: team?.displayName || 'KONTROLIA',
+      groupIdentifier: team?.groupIdentifier || 'GRUPO-001',
+      logoUrl: team?.logoUrl,
+      primaryColor: team?.primaryColor || '#2563eb',
     };
 
     const html = template(data);

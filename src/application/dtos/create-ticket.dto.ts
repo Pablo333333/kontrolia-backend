@@ -1,4 +1,10 @@
-import { IsString, IsNotEmpty, IsOptional, IsUUID, IsNumber } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsUUID, IsNumber, IsEnum, IsDateString } from 'class-validator';
+
+enum TicketPriority {
+  BAJA = 'BAJA',
+  MEDIA = 'MEDIA',
+  URGENTE = 'URGENTE',
+}
 
 export class CreateTicketDto {
   @IsString()
@@ -24,4 +30,36 @@ export class CreateTicketDto {
   @IsUUID()
   @IsNotEmpty()
   workflowStateId: string;
+
+  @IsUUID()
+  @IsOptional()
+  destinatarioId?: string;
+
+  @IsString()
+  @IsOptional()
+  messageType?: string;
+
+  @IsString()
+  @IsOptional()
+  tramiteSubtype?: string;
+
+  @IsString()
+  @IsOptional()
+  responseUrgency?: string;
+
+  @IsDateString()
+  @IsOptional()
+  fechaLimite?: string;
+
+  @IsEnum(TicketPriority)
+  @IsOptional()
+  priority?: TicketPriority;
+
+  @IsString()
+  @IsOptional()
+  locationLabel?: string;
+
+  @IsUUID()
+  @IsOptional()
+  parentTicketId?: string;
 }

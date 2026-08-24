@@ -17,6 +17,16 @@ export class PrismaTicketRepository implements ITicketRepository {
         userId: ticket.userId,
         categoryId: ticket.categoryId,
         workflowStateId: ticket.workflowStateId,
+        destinatarioId: ticket.destinatarioId ?? undefined,
+        messageType: ticket.messageType ?? undefined,
+        tramiteSubtype: ticket.tramiteSubtype ?? undefined,
+        responseUrgency: ticket.responseUrgency ?? undefined,
+        fechaLimite: ticket.fechaLimite ?? undefined,
+        locationLabel: ticket.locationLabel ?? undefined,
+        parentTicketId: ticket.parentTicketId ?? undefined,
+        rootTicketId: ticket.rootTicketId ?? undefined,
+        isContinuation: ticket.isContinuation ?? false,
+        workGroupId: ticket.workGroupId ?? undefined,
         priority: (ticket.priority as any) || 'BAJA',
         isArchived: ticket.isArchived || false,
       },
@@ -31,6 +41,8 @@ export class PrismaTicketRepository implements ITicketRepository {
       include: {
         category: true,
         status: true,
+        user: true,
+        destinatario: true,
       },
     });
 
@@ -39,15 +51,24 @@ export class PrismaTicketRepository implements ITicketRepository {
       ...ticket,
       categoryName: ticket.category.name,
       statusName: ticket.status.name,
+      remitenteName: ticket.user?.name ?? ticket.user?.email ?? null,
+      destinatarioName: ticket.destinatario?.name ?? ticket.destinatario?.email ?? null,
     } as any);
   }
 
-  async findAll(filters?: { categoryId?: string; workflowStateId?: string; q?: string; includeArchived?: boolean }): Promise<Ticket[]> {
+  async findAll(filters?: {
+    categoryId?: string;
+    workflowStateId?: string;
+    q?: string;
+    includeArchived?: boolean;
+    includeDocuments?: boolean;
+    limit?: number;
+    offset?: number;
+  }): Promise<Ticket[]> {
     const where: any = {};
     if (filters?.categoryId) where.categoryId = filters.categoryId;
     if (filters?.workflowStateId) where.workflowStateId = filters.workflowStateId;
-    
-    // Por defecto ocultar archivados a menos que se pida explícitamente
+
     if (!filters?.includeArchived) {
       where.isArchived = false;
     }
@@ -60,96 +81,145 @@ export class PrismaTicketRepository implements ITicketRepository {
       ];
     }
 
+    const take = Math.min(Math.max(filters?.limit ?? 100, 1), 300);
+    const skip = Math.max(filters?.offset ?? 0, 0);
+
     const tickets = await this.prisma.ticket.findMany({
       where,
+      take,
+      skip,
       include: {
-        category: true,
-        status: true,
-        documents: true,
+        category: { select: { id: true, name: true } },
+        status: { select: { id: true, name: true } },
+        user: { select: { id: true, name: true, email: true } },
+        destinatario: { select: { id: true, name: true, email: true } },
+        ...(filters?.includeDocuments
+          ? { documents: { where: { isLatest: true }, take: 5 } }
+          : {}),
       },
       orderBy: { createdAt: 'desc' },
     });
-
-    if (tickets.length > 0) {
-      console.log('[PrismaTicketRepository] First ticket structure:', JSON.stringify(tickets[0], null, 2));
-    }
 
     return tickets.map((t) => new Ticket({
       ...t,
       categoryName: t.category.name,
       statusName: t.status.name,
-      documents: t.documents,
+      documents: (t as any).documents,
+      remitenteName: t.user?.name ?? t.user?.email ?? null,
+      destinatarioName: t.destinatario?.name ?? t.destinatario?.email ?? null,
     } as any));
   }
 
   async getStats(): Promise<any> {
-    console.log('[PrismaTicketRepository] Fetching full analytics stats...');
-
-    // 1. Obtener todos los tickets con sus relaciones para procesar en memoria (más robusto)
     const allTickets = await this.prisma.ticket.findMany({
-      include: {
-        status: true,
-        category: true,
-        user: true,
-      }
+      select: {
+        id: true,
+        isArchived: true,
+        priority: true,
+        messageType: true,
+        tramiteSubtype: true,
+        isContinuation: true,
+        fechaLimite: true,
+        createdAt: true,
+        updatedAt: true,
+        status: { select: { name: true } },
+        category: { select: { name: true } },
+        user: { select: { name: true } },
+      },
     });
 
-    console.log(`[PrismaTicketRepository] Total tickets found for analytics: ${allTickets.length}`);
+    const activeTickets = allTickets.filter(t => !t.isArchived);
+    const now = new Date();
 
-    // 2. Calcular KPIs
-    const kpis = {
-      total: allTickets.length,
-      pending: allTickets.filter(t => t.status && ['NUEVO', 'EN_PROCESO'].includes(t.status.name.toUpperCase())).length,
-      completed: allTickets.filter(t => t.status && (t.status.name.toUpperCase() === 'CERRADO' || t.status.name.toUpperCase() === 'COMPLETADO')).length,
-      urgent: allTickets.filter(t => t.priority && ['URGENTE', 'MEDIA'].includes(t.priority.toUpperCase())).length,
+    const statusName = (t: (typeof allTickets)[number]) =>
+      t.status?.name?.toUpperCase() ?? '';
+
+    const isClosed = (t: (typeof allTickets)[number]) =>
+      ['COMPLETADO', 'CERRADO'].includes(statusName(t));
+
+    const vencidos = activeTickets.filter(t => {
+      if (!t.fechaLimite || isClosed(t)) return false;
+      return new Date(t.fechaLimite) < now;
+    }).length;
+
+    const dashboard = {
+      nuevos: activeTickets.filter(t => statusName(t) === 'NUEVO').length,
+      enProceso: activeTickets.filter(t => statusName(t) === 'EN_PROCESO').length,
+      completados: activeTickets.filter(t => statusName(t) === 'COMPLETADO').length,
+      cerrados: allTickets.filter(t => statusName(t) === 'CERRADO' || t.isArchived).length,
+      cancelados: activeTickets.filter(t => statusName(t) === 'CANCELADO').length,
+      vencidos,
+      overdue: vencidos,
+      pending: activeTickets.filter(t =>
+        ['NUEVO', 'EN_PROCESO'].includes(statusName(t)),
+      ).length,
+      nuevosTemas: activeTickets.filter(t => !t.isContinuation).length,
+      continuaciones: activeTickets.filter(t => t.isContinuation).length,
     };
 
-    // 3. Distribución por Categoría
+    const kpis = {
+      total: activeTickets.length,
+      pending: dashboard.pending,
+      completed: activeTickets.filter(t => isClosed(t)).length,
+      urgent: activeTickets.filter(t =>
+        t.priority && t.priority.toUpperCase() === 'URGENTE',
+      ).length,
+    };
+
     const categoryMap: Record<string, number> = {};
-    allTickets.forEach(t => {
+    activeTickets.forEach(t => {
       const name = t.category?.name || 'Sin Categoría';
       categoryMap[name] = (categoryMap[name] || 0) + 1;
     });
     const byCategory = Object.entries(categoryMap).map(([name, value]) => ({ name, value }));
 
-    // 4. Carga por Usuario
     const userMap: Record<string, number> = {};
-    allTickets.forEach(t => {
+    activeTickets.forEach(t => {
       const name = t.user?.name || 'Usuario Desconocido';
       userMap[name] = (userMap[name] || 0) + 1;
     });
     const byUser = Object.entries(userMap).map(([name, tickets]) => ({ name, tickets }));
 
-    // 5. Evolución últimos 7 días
+    const priorityMap: Record<string, number> = { URGENTE: 0, MEDIA: 0, BAJA: 0 };
+    activeTickets.forEach(t => {
+      const key = (t.priority || 'BAJA').toUpperCase();
+      priorityMap[key] = (priorityMap[key] || 0) + 1;
+    });
+    const byPriority = Object.entries(priorityMap).map(([name, value]) => ({ name, value }));
+
+    const typeMap: Record<string, number> = {};
+    activeTickets.forEach(t => {
+      const name = t.messageType || t.tramiteSubtype || 'SIN_TIPO';
+      typeMap[name] = (typeMap[name] || 0) + 1;
+    });
+    const byMessageType = Object.entries(typeMap).map(([name, value]) => ({ name, value }));
+
     const evolution = [];
     for (let i = 6; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
       date.setHours(0, 0, 0, 0);
-      
+
       const nextDate = new Date(date);
       nextDate.setDate(date.getDate() + 1);
 
-      const creados = allTickets.filter(t => 
+      const creados = allTickets.filter(t =>
         new Date(t.createdAt) >= date && new Date(t.createdAt) < nextDate
       ).length;
 
-      const cerrados = allTickets.filter(t => 
-        new Date(t.updatedAt) >= date && new Date(t.updatedAt) < nextDate && 
-        (t.status.name.toUpperCase() === 'CERRADO' || t.status.name.toUpperCase() === 'COMPLETADO')
+      const cerrados = allTickets.filter(t =>
+        new Date(t.updatedAt) >= date && new Date(t.updatedAt) < nextDate &&
+        (t.status?.name?.toUpperCase() === 'CERRADO' || t.status?.name?.toUpperCase() === 'COMPLETADO')
       ).length;
 
       evolution.push({
         name: date.toLocaleDateString('es-ES', { weekday: 'short' }),
         creados,
-        cerrados
+        cerrados,
       });
     }
 
-    const result = { kpis, byCategory, byUser, evolution };
-    console.log('[PrismaTicketRepository] Analytics result:', JSON.stringify(result, null, 2));
-    
-    return result;
+    return { dashboard, kpis, byCategory, byUser, byPriority, byMessageType, evolution };
   }
 
   async update(id: string, ticket: Partial<Ticket>): Promise<Ticket> {
@@ -162,6 +232,9 @@ export class PrismaTicketRepository implements ITicketRepository {
         categoryId: ticket.categoryId,
         priority: ticket.priority as any,
         isArchived: ticket.isArchived,
+        rootTicketId: ticket.rootTicketId,
+        parentTicketId: ticket.parentTicketId,
+        isContinuation: ticket.isContinuation,
       },
     });
 

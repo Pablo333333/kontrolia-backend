@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <style>
         body { font-family: 'Helvetica', sans-serif; color: #333; line-height: 1.6; padding: 40px; }
-        .header { border-bottom: 2px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; }
-        .logo { font-size: 24px; font-weight: bold; color: #2563eb; }
+        .header { border-bottom: 2px solid {{primaryColor}}; padding-bottom: 20px; margin-bottom: 30px; }
+        .logo { font-size: 24px; font-weight: bold; color: {{primaryColor}}; }
         .title { font-size: 20px; font-weight: bold; margin-bottom: 10px; }
         .metadata { font-size: 12px; color: #666; margin-bottom: 20px; }
         .section { margin-bottom: 20px; }
@@ -16,43 +16,46 @@
 </head>
 <body>
     <div class="header">
-        <div class="logo">KONTROLIA</div>
-        <div>Reporte Oficial de Ticket</div>
+        {{#if logoUrl}}
+        <img src="{{logoUrl}}" alt="Logo" style="max-height:48px;margin-bottom:8px;" />
+        {{/if}}
+        <div class="logo">{{organizationName}}</div>
+        <div>Documento oficial de comunicación — {{groupIdentifier}}</div>
     </div>
 
     <div class="metadata">
         <strong>ID:</strong> {{id}}<br>
-        <strong>Fecha de Generación:</strong> {{currentDate}}<br>
-        <strong>Generado por:</strong> {{userName}}
+        <strong>Fecha de generación:</strong> {{currentDate}}<br>
+        <strong>Responsable:</strong> {{userName}}<br>
+        <strong>Prioridad:</strong> {{priority}}
     </div>
 
     <div class="section">
         <div class="title">{{title}}</div>
         <div class="metadata">
-            <strong>Categoría:</strong> {{categoryName}} | 
-            <strong>Estado Actual:</strong> {{statusName}}
+            <strong>Categoría:</strong> {{categoryName}} |
+            <strong>Estado:</strong> {{statusName}}
         </div>
     </div>
 
     <div class="section">
-        <span class="label">Descripción del Caso:</span>
-        <div class="content">
-            {{description}}
-        </div>
+        <span class="label">Descripción</span>
+        <div class="content">{{description}}</div>
     </div>
 
     {{#if hasLocation}}
     <div class="section">
-        <span class="label">Ubicación de Campo:</span>
+        <span class="label">Ubicación de origen</span>
         <div class="content">
-            Latitud: {{latitude}}, Longitud: {{longitude}}
+            {{#if locationLabel}}{{locationLabel}}<br>{{/if}}
+            {{#if latitude}}Coordenadas: {{latitude}}, {{longitude}}{{/if}}
         </div>
     </div>
     {{/if}}
 
     <div class="footer">
-        Este documento es una representación digital oficial generada por el sistema KONTROLIA.<br>
-        © 2026 KONTROLIA - Gestión de Comunicación Inteligente.
+        Documento generado por {{organizationName}}.<br>
+        © 2026 {{organizationName}} — Gestión de comunicación inteligente.
     </div>
 </body>
 </html>

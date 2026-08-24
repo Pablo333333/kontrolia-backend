@@ -22,21 +22,26 @@ enum Priority {
 }
 
 model User {
-  id        String          @id @default(uuid())
-  email     String          @unique
-  password  String
-  name      String?
-  role      Role            @default(OPERARIO)
-  pushToken String?
-  tickets   Ticket[]
-  documents Document[]
-  history   TicketHistory[]
-  comments  Comment[]
-  sentTramites     Tramite[] @relation("SentTramites")
-  receivedTramites Tramite[] @relation("ReceivedTramites")
+  id               String            @id @default(uuid())
+  email            String            @unique
+  password         String
+  name             String?
+  role             Role              @default(OPERARIO)
+  pushToken        String?
+  phone            String?
+  activeWorkGroupId String?
+  activeWorkGroup  WorkGroup?        @relation("UserActiveWorkGroup", fields: [activeWorkGroupId], references: [id])
+  tickets          Ticket[]
+  receivedTickets  Ticket[]          @relation("ReceivedTickets")
+  documents        Document[]
+  history          TicketHistory[]
+  comments         Comment[]
+  sentTramites     Tramite[]         @relation("SentTramites")
+  receivedTramites Tramite[]         @relation("ReceivedTramites")
   tramiteHistory   TramiteHistory[]
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  workGroupMemberships WorkGroupMember[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 }
 
 model Ticket {
@@ -56,6 +61,20 @@ model Ticket {
   comments        Comment[]
   priority        Priority        @default(BAJA)
   isArchived      Boolean         @default(false)
+  destinatario    User?           @relation("ReceivedTickets", fields: [destinatarioId], references: [id])
+  destinatarioId  String?
+  messageType     String?
+  tramiteSubtype  String?
+  responseUrgency String?
+  fechaLimite     DateTime?
+  locationLabel   String?
+  parentTicket    Ticket?         @relation("TicketThread", fields: [parentTicketId], references: [id])
+  parentTicketId  String?
+  childTickets    Ticket[]        @relation("TicketThread")
+  rootTicketId    String?
+  isContinuation  Boolean         @default(false)
+  workGroup       WorkGroup?      @relation(fields: [workGroupId], references: [id])
+  workGroupId     String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 }
@@ -74,6 +93,8 @@ model Document {
   ticketId      String?
   tramite       Tramite? @relation(fields: [tramiteId], references: [id])
   tramiteId     String?
+  folder        DocumentFolder? @relation(fields: [folderId], references: [id])
+  folderId      String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
@@ -124,12 +145,90 @@ model WorkflowState {
 }
 
 model Category {
+  id            String         @id @default(uuid())
+  name          String         @unique
+  description   String?
+  tickets       Ticket[]
+  subcategories Subcategory[]
+  workGroupTopics WorkGroupTopic[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Subcategory {
   id          String   @id @default(uuid())
-  name        String   @unique
+  name        String
   description String?
-  tickets     Ticket[]
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@unique([categoryId, name])
+}
+
+model TeamSettings {
+  id              String   @id @default(uuid())
+  displayName     String   @default("KONTROLIA")
+  groupIdentifier String   @default("GRUPO-001")
+  logoUrl         String?
+  primaryColor    String   @default("#2563eb")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model WorkGroup {
+  id              String            @id @default(uuid())
+  name            String
+  identifier      String            @unique
+  description     String?
+  logoUrl         String?
+  primaryColor    String            @default("#2563eb")
+  isActive        Boolean           @default(true)
+  members         WorkGroupMember[]
+  topics          WorkGroupTopic[]
+  folders         DocumentFolder[]
+  tickets         Ticket[]
+  activeUsers     User[]            @relation("UserActiveWorkGroup")
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+}
+
+model WorkGroupMember {
+  id          String    @id @default(uuid())
+  workGroupId String
+  workGroup   WorkGroup @relation(fields: [workGroupId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleInGroup String    @default("MEMBER") // LEAD | MEMBER
+  createdAt   DateTime  @default(now())
+
+  @@unique([workGroupId, userId])
+}
+
+model WorkGroupTopic {
+  id          String    @id @default(uuid())
+  workGroupId String
+  workGroup   WorkGroup @relation(fields: [workGroupId], references: [id], onDelete: Cascade)
+  categoryId  String
+  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@unique([workGroupId, categoryId])
+}
+
+model DocumentFolder {
+  id               String    @id @default(uuid())
+  name             String
+  description      String?
+  cloudinaryPrefix String?
+  workGroupId      String
+  workGroup        WorkGroup @relation(fields: [workGroupId], references: [id], onDelete: Cascade)
+  documents        Document[]
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([workGroupId, name])
 }
 
 model TicketHistory {

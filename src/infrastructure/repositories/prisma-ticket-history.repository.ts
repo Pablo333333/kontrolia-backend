@@ -34,6 +34,23 @@ export class PrismaTicketHistoryRepository implements ITicketHistoryRepository {
       orderBy: { timestamp: 'desc' },
     });
 
-    return history.map((h) => new TicketHistory(h));
+    const stateIds = [
+      ...new Set(
+        history.flatMap(h => [h.oldStateId, h.newStateId].filter(Boolean) as string[]),
+      ),
+    ];
+
+    const states = stateIds.length
+      ? await this.prisma.workflowState.findMany({ where: { id: { in: stateIds } } })
+      : [];
+
+    const stateById = Object.fromEntries(states.map(s => [s.id, s.name]));
+
+    return history.map((h) => new TicketHistory({
+      ...h,
+      oldStateName: h.oldStateId ? stateById[h.oldStateId] : undefined,
+      newStateName: stateById[h.newStateId],
+      userName: h.user?.name ?? h.user?.email ?? undefined,
+    }));
   }
 }

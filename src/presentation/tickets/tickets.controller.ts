@@ -3,12 +3,17 @@ import type { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CreateTicketUseCase } from '../../application/use-cases/create-ticket.use-case';
 import { ChangeTicketStateUseCase } from '../../application/use-cases/change-ticket-state.use-case';
+import { OpenTicketUseCase } from '../../application/use-cases/open-ticket.use-case';
+import { CloseTicketUseCase } from '../../application/use-cases/close-ticket.use-case';
 import { UploadDocumentUseCase } from '../../application/use-cases/upload-document.use-case';
 import { GetTicketDocumentsUseCase } from '../../application/use-cases/get-ticket-documents.use-case';
 import { CreateCommentUseCase } from '../../application/use-cases/create-comment.use-case';
 import { GetTicketCommentsUseCase } from '../../application/use-cases/get-ticket-comments.use-case';
 import { GenerateDocumentUseCase } from '../../application/use-cases/generate-document.use-case';
 import { SummarizeTicketConversationUseCase } from '../../application/use-cases/summarize-ticket-conversation.use-case';
+import { DraftSmartDocumentUseCase } from '../../application/use-cases/draft-smart-document.use-case';
+import { SaveSmartDocumentUseCase } from '../../application/use-cases/save-smart-document.use-case';
+import { DraftSmartDocumentDto, SaveSmartDocumentDto } from '../../application/dtos/smart-document.dto';
 import { CreateTicketDto } from '../../application/dtos/create-ticket.dto';
 import { ChangeTicketStatusDto } from '../../application/dtos/change-ticket-status.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -29,11 +34,15 @@ export class TicketsController {
   constructor(
     private readonly createTicketUseCase: CreateTicketUseCase,
     private readonly changeTicketStateUseCase: ChangeTicketStateUseCase,
+    private readonly openTicketUseCase: OpenTicketUseCase,
+    private readonly closeTicketUseCase: CloseTicketUseCase,
     private readonly uploadDocumentUseCase: UploadDocumentUseCase,
     private readonly getTicketDocumentsUseCase: GetTicketDocumentsUseCase,
     private readonly createCommentUseCase: CreateCommentUseCase,
     private readonly getTicketCommentsUseCase: GetTicketCommentsUseCase,
     private readonly generateDocumentUseCase: GenerateDocumentUseCase,
+    private readonly draftSmartDocumentUseCase: DraftSmartDocumentUseCase,
+    private readonly saveSmartDocumentUseCase: SaveSmartDocumentUseCase,
     private readonly summarizeTicketConversationUseCase: SummarizeTicketConversationUseCase,
     private readonly prisma: PrismaService,
     private readonly ocrService: OcrService,
@@ -66,6 +75,22 @@ export class TicketsController {
     }
   }
 
+  @Post('smart-document/draft')
+  @Roles(Role.ADMIN, Role.SUPERVISOR, Role.OPERARIO)
+  async draftSmartDocument(@Body() dto: DraftSmartDocumentDto) {
+    return this.draftSmartDocumentUseCase.execute(dto);
+  }
+
+  @Post(':id/smart-document/save')
+  @Roles(Role.ADMIN, Role.SUPERVISOR, Role.OPERARIO)
+  async saveSmartDocument(
+    @Param('id') id: string,
+    @Body() dto: SaveSmartDocumentDto,
+    @CurrentUser() user: { userId: string },
+  ) {
+    return this.saveSmartDocumentUseCase.execute(id, dto, user.userId);
+  }
+
   @Patch(':id/status')
   @Roles(Role.ADMIN, Role.SUPERVISOR)
   async changeStatus(
@@ -81,11 +106,38 @@ export class TicketsController {
     @Query('categoryId') categoryId?: string,
     @Query('workflowStateId') workflowStateId?: string,
     @Query('q') q?: string,
+    @Query('includeArchived') includeArchived?: string,
+    @Query('includeDocuments') includeDocuments?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
   ) {
-    if (q) {
-      return this.ticketRepository.findAll({ categoryId, workflowStateId, q });
-    }
-    return this.ticketRepository.findAll({ categoryId, workflowStateId });
+    return this.ticketRepository.findAll({
+      categoryId,
+      workflowStateId,
+      q,
+      includeArchived: includeArchived === 'true',
+      includeDocuments: includeDocuments === 'true',
+      limit: limit ? Number(limit) : undefined,
+      offset: offset ? Number(offset) : undefined,
+    });
+  }
+
+  @Post(':id/open')
+  @Roles(Role.ADMIN, Role.SUPERVISOR, Role.OPERARIO)
+  async open(
+    @Param('id') id: string,
+    @CurrentUser() user: { userId: string },
+  ) {
+    return this.openTicketUseCase.execute(id, user.userId);
+  }
+
+  @Post(':id/close')
+  @Roles(Role.ADMIN, Role.SUPERVISOR, Role.OPERARIO)
+  async close(
+    @Param('id') id: string,
+    @CurrentUser() user: { userId: string },
+  ) {
+    return this.closeTicketUseCase.execute(id, user.userId);
   }
 
   @Get('stats')
@@ -132,14 +184,23 @@ export class TicketsController {
         });
       }
 
+      let extractedText: string | undefined;
+      if (file.mimetype?.startsWith('image/')) {
+        extractedText = await this.ocrService.extractTextFromUrl(file.path);
+        if (!extractedText?.trim()) {
+          extractedText = undefined;
+        }
+      }
+
       return this.uploadDocumentUseCase.execute({
         name: file.originalname,
-        url: file.path, // En Cloudinary con multer-storage-cloudinary, file.path es la URL
+        url: file.path,
         type: file.mimetype,
         userId: user.userId,
         ticketId: id,
         version,
         isLatest: true,
+        extractedText,
       } as any);
     } catch (error) {
       console.error('[Cloudinary Error] Fallo en la subida:', error);
@@ -171,7 +232,7 @@ export class TicketsController {
   }
 
   @Post(':id/summarize')
-  @Roles(Role.ADMIN, Role.SUPERVISOR)
+  @Roles(Role.ADMIN, Role.SUPERVISOR, Role.OPERARIO)
   async summarize(@Param('id') id: string) {
     return { summary: await this.summarizeTicketConversationUseCase.execute(id) };
   }
