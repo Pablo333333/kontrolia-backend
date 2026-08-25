@@ -27,6 +27,7 @@ import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { OcrService } from '../../infrastructure/ocr/ocr.service';
 import { PredictiveService } from '../../infrastructure/predictive/predictive.service';
 import { CloudinaryService } from '../../infrastructure/documents/cloudinary.service';
+import { SemanticSearchService } from '../../infrastructure/search/semantic-search.service';
 
 @Controller('tickets')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -48,6 +49,7 @@ export class TicketsController {
     private readonly ocrService: OcrService,
     private readonly predictiveService: PredictiveService,
     private readonly cloudinaryService: CloudinaryService,
+    private readonly semanticSearchService: SemanticSearchService,
     @Inject(ITicketRepository)
     private readonly ticketRepository: ITicketRepository,
     @Inject(ITicketHistoryRepository)
@@ -104,19 +106,31 @@ export class TicketsController {
   @Get()
   async findAll(
     @Query('categoryId') categoryId?: string,
+    @Query('subcategoryId') subcategoryId?: string,
     @Query('workflowStateId') workflowStateId?: string,
+    @Query('priority') priority?: string,
+    @Query('messageType') messageType?: string,
+    @Query('userId') userId?: string,
+    @Query('destinatarioId') destinatarioId?: string,
     @Query('q') q?: string,
     @Query('includeArchived') includeArchived?: string,
     @Query('includeDocuments') includeDocuments?: string,
+    @Query('includeLastResponse') includeLastResponse?: string,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ) {
     return this.ticketRepository.findAll({
       categoryId,
+      subcategoryId,
       workflowStateId,
+      priority,
+      messageType,
+      userId,
+      destinatarioId,
       q,
       includeArchived: includeArchived === 'true',
       includeDocuments: includeDocuments === 'true',
+      includeLastResponse: includeLastResponse !== 'false',
       limit: limit ? Number(limit) : undefined,
       offset: offset ? Number(offset) : undefined,
     });
@@ -145,6 +159,30 @@ export class TicketsController {
     return this.ticketRepository.getStats();
   }
 
+  @Get('search')
+  async search(
+    @Query('q') q?: string,
+    @Query('mode') mode?: string,
+    @Query('includeArchived') includeArchived?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const query = (q || '').trim();
+    if (!query) return [];
+
+    if ((mode || 'semantic') === 'literal') {
+      return this.ticketRepository.findAll({
+        q: query,
+        includeArchived: includeArchived === 'true',
+        limit: limit ? Number(limit) : 50,
+      });
+    }
+
+    return this.semanticSearchService.search(query, {
+      includeArchived: includeArchived === 'true',
+      limit: limit ? Number(limit) : 50,
+    });
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string) {
     return this.ticketRepository.findById(id);
@@ -156,9 +194,7 @@ export class TicketsController {
   }
 
   @Post(':id/documents')
-  @UseInterceptors(FileInterceptor('file', {
-    storage: new CloudinaryService().getStorage('tickets/documents'),
-  }))
+  @UseInterceptors(FileInterceptor('file', new CloudinaryService().getUploadOptions('tickets/documents')))
   async uploadFile(
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,

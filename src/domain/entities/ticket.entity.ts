@@ -15,6 +15,7 @@ export class Ticket {
   locationLabel?: string | null;
   workflowStateId: string;
   categoryId: string;
+  subcategoryId?: string | null;
   userId: string;
   priority: 'BAJA' | 'MEDIA' | 'URGENTE';
   isArchived: boolean;
@@ -36,6 +37,9 @@ export class Ticket {
   comments?: Comment[];
   statusName?: string | null;
   categoryName?: string | null;
+  subcategoryName?: string | null;
   destinatarioName?: string | null;
   remitenteName?: string | null;
+  lastResponseContent?: string | null;
+  lastResponseAt?: Date | null;
 }

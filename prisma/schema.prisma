@@ -31,6 +31,7 @@ model User {
   phone            String?
   activeWorkGroupId String?
   activeWorkGroup  WorkGroup?        @relation("UserActiveWorkGroup", fields: [activeWorkGroupId], references: [id])
+  preference       UserPreference?
   tickets          Ticket[]
   receivedTickets  Ticket[]          @relation("ReceivedTickets")
   documents        Document[]
@@ -44,6 +45,21 @@ model User {
   updatedAt        DateTime          @updatedAt
 }
 
+model UserPreference {
+  id                   String   @id @default(uuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  defaultInboxView     String   @default("active")
+  searchMode           String   @default("semantic")
+  preferredCategoryIds String?
+  notifyEmail          Boolean  @default(true)
+  notifyPush           Boolean  @default(true)
+  notifyWhatsApp       Boolean  @default(true)
+  accentColor          String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
 model Ticket {
   id              String          @id @default(uuid())
   title           String
@@ -54,6 +70,8 @@ model Ticket {
   workflowStateId String
   category        Category        @relation(fields: [categoryId], references: [id])
   categoryId      String
+  subcategory     Subcategory?    @relation(fields: [subcategoryId], references: [id])
+  subcategoryId   String?
   user            User            @relation(fields: [userId], references: [id])
   userId          String
   documents       Document[]
@@ -161,6 +179,7 @@ model Subcategory {
   description String?
   categoryId  String
   category    Category @relation(fields: [categoryId], references: [id])
+  tickets     Ticket[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

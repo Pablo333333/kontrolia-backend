@@ -28,6 +28,10 @@ export class CreateTicketDto {
   categoryId: string;
 
   @IsUUID()
+  @IsOptional()
+  subcategoryId?: string;
+
+  @IsUUID()
   @IsNotEmpty()
   workflowStateId: string;
 

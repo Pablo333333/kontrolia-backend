@@ -1,13 +1,23 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
-import * as multer from 'multer';
+import type { Options as MulterOptions } from 'multer';
+
+const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50 MB (incluye video)
+
+const ALLOWED_PREFIXES = [
+  'image/',
+  'video/',
+  'audio/',
+  'application/pdf',
+  'application/msword',
+  'application/vnd.',
+  'text/',
+];
 
 @Injectable()
 export class CloudinaryService {
   constructor() {
-    // Cloudinary se configura automáticamente si CLOUDINARY_URL está en el entorno
-    // pero podemos forzar la configuración si es necesario.
     if (process.env.CLOUDINARY_URL) {
       const url = process.env.CLOUDINARY_URL;
       const regex = /cloudinary:\/\/([^:]+):([^@]+)@(.+)/;
@@ -28,12 +38,34 @@ export class CloudinaryService {
       params: {
         // @ts-ignore
         folder: folder,
-        resource_type: 'auto', // Permite subir audios, imágenes, etc.
-        public_id: (req, file) => {
-          const randomName = Array(16).fill(null).map(() => (Math.round(Math.random() * 16)).toString(16)).join('');
+        resource_type: 'auto',
+        public_id: (_req, _file) => {
+          const randomName = Array(16)
+            .fill(null)
+            .map(() => Math.round(Math.random() * 16).toString(16))
+            .join('');
           return `${Date.now()}-${randomName}`;
         },
       },
     });
+  }
+
+  /** Multer options con límite de tamaño y tipos permitidos (incl. video). */
+  getUploadOptions(folder: string = 'kontrolia'): MulterOptions {
+    return {
+      storage: this.getStorage(folder),
+      limits: { fileSize: MAX_FILE_BYTES },
+      fileFilter: (_req, file, cb) => {
+        const mime = (file.mimetype || '').toLowerCase();
+        const ok = ALLOWED_PREFIXES.some((p) => mime.startsWith(p) || mime === p);
+        if (!ok) {
+          return cb(
+            new BadRequestException(`Tipo de archivo no permitido: ${mime}`) as any,
+            false,
+          );
+        }
+        cb(null, true);
+      },
+    };
   }
 }

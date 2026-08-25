@@ -8,6 +8,10 @@ import { AuditService } from '../../infrastructure/audit/audit.service';
 import { UploadDocumentUseCase } from './upload-document.use-case';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { NotificationService } from '../../infrastructure/notifications/notification.service';
+import {
+  composeCategoryTitle,
+  resolveSubcategoryId,
+} from '../utils/resolve-subcategory';
 
 @Injectable()
 export class CreateTicketUseCase {
@@ -50,14 +54,38 @@ export class CreateTicketUseCase {
       }
     }
 
-    const ticket = new Ticket({
+    const category = await this.prisma.category.findUnique({
+      where: { id: dto.categoryId },
+      include: { subcategories: true },
+    });
+
+    const subcategoryId = resolveSubcategoryId({
+      subcategories: category?.subcategories ?? [],
       title: dto.title,
+      messageType: dto.messageType,
+      tramiteSubtype: dto.tramiteSubtype,
+      explicitId: dto.subcategoryId,
+    });
+
+    const subcategory = subcategoryId
+      ? category?.subcategories.find((s) => s.id === subcategoryId)
+      : undefined;
+
+    const title = composeCategoryTitle(
+      category?.name ?? 'Mensaje',
+      subcategory?.name,
+      dto.title,
+    );
+
+    const ticket = new Ticket({
+      title,
       description: dto.description,
       latitude: dto.latitude,
       longitude: dto.longitude,
       locationLabel: dto.locationLabel,
       userId: userId,
       categoryId: dto.categoryId,
+      subcategoryId,
       workflowStateId: nuevoState?.id ?? dto.workflowStateId,
       destinatarioId: dto.destinatarioId,
       messageType: dto.messageType,
@@ -106,12 +134,11 @@ export class CreateTicketUseCase {
     if (dto.destinatarioId && dto.destinatarioId !== userId) {
       await this.notificationService.notifyNewMessage(
         dto.destinatarioId,
-        dto.title,
+        title,
         createdTicket.id,
         dto.priority === 'URGENTE',
       );
     } else if (!dto.destinatarioId && workGroupId) {
-      // Broadcast to group members when no destinatario
       const members = await this.prisma.workGroupMember.findMany({
         where: { workGroupId, userId: { not: userId } },
         select: { userId: true },
@@ -120,7 +147,7 @@ export class CreateTicketUseCase {
         members.map(m => m.userId),
         {
           title: dto.priority === 'URGENTE' ? 'Mensaje urgente al grupo' : 'Nuevo mensaje al grupo',
-          body: dto.title,
+          body: title,
           data: { entityId: createdTicket.id, entityType: 'TICKET', alertType: 'NEW_MESSAGE' },
           channels: ['PUSH', 'EMAIL', 'WHATSAPP'],
         },

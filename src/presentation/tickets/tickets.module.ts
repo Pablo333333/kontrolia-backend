@@ -27,6 +27,7 @@ import { OcrModule } from '../../infrastructure/ocr/ocr.module';
 import { AuditModule } from '../../infrastructure/audit/audit.module';
 import { PredictiveModule } from '../../infrastructure/predictive/predictive.module';
 import { CloudinaryService } from '../../infrastructure/documents/cloudinary.service';
+import { SemanticSearchService } from '../../infrastructure/search/semantic-search.service';
 
 @Module({
   imports: [AiModule, OcrModule, AuditModule, PredictiveModule],
@@ -34,6 +35,7 @@ import { CloudinaryService } from '../../infrastructure/documents/cloudinary.ser
   providers: [
     PrismaService,
     CloudinaryService,
+    SemanticSearchService,
     CreateTicketUseCase,
     ChangeTicketStateUseCase,
     OpenTicketUseCase,
@@ -47,6 +49,7 @@ import { CloudinaryService } from '../../infrastructure/documents/cloudinary.ser
     GetTicketCommentsUseCase,
     GenerateDocumentUseCase,
     SummarizeTicketConversationUseCase,
+    SemanticSearchService,
     {
       provide: ITicketRepository,
       useClass: PrismaTicketRepository,

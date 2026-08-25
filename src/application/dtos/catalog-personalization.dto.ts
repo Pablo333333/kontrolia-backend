@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsUUID, IsBoolean, IsIn } from 'class-validator';
 
 export class CreateCategoryDto {
   @IsString()
@@ -69,4 +69,36 @@ export class CreateDocumentFolderDto {
   @IsString()
   @IsOptional()
   description?: string;
+}
+
+export class UpdateUserPreferenceDto {
+  @IsString()
+  @IsOptional()
+  @IsIn(['active', 'historical'])
+  defaultInboxView?: string;
+
+  @IsString()
+  @IsOptional()
+  @IsIn(['literal', 'semantic'])
+  searchMode?: string;
+
+  @IsString()
+  @IsOptional()
+  preferredCategoryIds?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  notifyEmail?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  notifyPush?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  notifyWhatsApp?: boolean;
+
+  @IsString()
+  @IsOptional()
+  accentColor?: string;
 }

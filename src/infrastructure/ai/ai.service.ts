@@ -30,9 +30,7 @@ export class AiService {
   async classifyPriority(text: string): Promise<'ALTA' | 'BAJA'> {
     const urgentWords = ['urgente', 'peligro', 'rotura', 'emergencia', 'inmediato', 'crítico'];
     const lowerText = text.toLowerCase();
-    
     const isUrgent = urgentWords.some(word => lowerText.includes(word));
-    
     return isUrgent ? 'ALTA' : 'BAJA';
   }
 
@@ -62,5 +60,69 @@ export class AiService {
     } catch {
       return baseDraft;
     }
+  }
+
+  /**
+   * Expande una consulta a términos relacionados (sinónimos, contexto) para búsqueda semántica.
+   */
+  async expandSearchQuery(query: string): Promise<string[]> {
+    const base = this.fallbackExpand(query);
+    if (!process.env.OPENAI_API_KEY) {
+      return base;
+    }
+
+    try {
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: 'system',
+            content:
+              'Eres un asistente de búsqueda documental institucional en español. ' +
+              'Dada una consulta, responde SOLO un JSON {"terms":["..."]} con 5 a 12 términos o frases cortas ' +
+              'relacionadas por sentido (sinónimos, hiperónimos, variantes). Incluye la consulta original.',
+          },
+          { role: 'user', content: query },
+        ],
+        response_format: { type: 'json_object' },
+      });
+
+      const raw = response.choices[0].message.content || '{}';
+      const parsed = JSON.parse(raw) as { terms?: string[] };
+      const terms = (parsed.terms || [])
+        .map((t) => String(t).trim())
+        .filter(Boolean);
+      return Array.from(new Set([...base, ...terms])).slice(0, 16);
+    } catch {
+      return base;
+    }
+  }
+
+  private fallbackExpand(query: string): string[] {
+    const q = query.trim().toLowerCase();
+    const synonyms: Record<string, string[]> = {
+      oficio: ['comunicación formal', 'documento oficial', 'tramite'],
+      carta: ['correspondencia', 'comunicación escrita', 'tramite'],
+      solicitud: ['pedido', 'requerimiento', 'petición', 'tramite'],
+      convenio: ['acuerdo', 'contrato', 'alianza'],
+      urgencia: ['urgente', 'prioridad alta', 'vencido', 'plazo'],
+      vencido: ['atrasado', 'fuera de plazo', 'pendiente'],
+      coordinacion: ['coordinación', 'reunión', 'chat', 'seguimiento'],
+      obra: ['construcción', 'expediente técnico', 'documentos técnicos'],
+      mapa: ['ubicación', 'geolocalización', 'lugar', 'coordenadas'],
+      respuesta: ['contestación', 'comentario', 'réplica'],
+    };
+
+    const extra: string[] = [query.trim()];
+    for (const [key, values] of Object.entries(synonyms)) {
+      if (q.includes(key) || values.some((v) => q.includes(v))) {
+        extra.push(key, ...values);
+      }
+    }
+
+    // Tokens individuales de la consulta
+    q.split(/\s+/).filter((t) => t.length > 2).forEach((t) => extra.push(t));
+
+    return Array.from(new Set(extra.map((t) => t.trim()).filter(Boolean))).slice(0, 12);
   }
 }

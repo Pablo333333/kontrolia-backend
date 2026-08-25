@@ -25,6 +25,7 @@ import {
   UpdateSubcategoryDto,
   UpdateTeamSettingsDto,
   CreateDocumentFolderDto,
+  UpdateUserPreferenceDto,
 } from '../../application/dtos/catalog-personalization.dto';
 import { DocumentExportService } from '../../infrastructure/documents/document-export.service';
 
@@ -35,6 +36,48 @@ export class CatalogController {
     private readonly prisma: PrismaService,
     private readonly documentExportService: DocumentExportService,
   ) {}
+
+  @Get('me/preferences')
+  async getMyPreferences(@CurrentUser() user: { userId: string }) {
+    let pref = await this.prisma.userPreference.findUnique({
+      where: { userId: user.userId },
+    });
+    if (!pref) {
+      pref = await this.prisma.userPreference.create({
+        data: { userId: user.userId },
+      });
+    }
+    return pref;
+  }
+
+  @Patch('me/preferences')
+  async updateMyPreferences(
+    @CurrentUser() user: { userId: string },
+    @Body() dto: UpdateUserPreferenceDto,
+  ) {
+    return this.prisma.userPreference.upsert({
+      where: { userId: user.userId },
+      create: {
+        userId: user.userId,
+        defaultInboxView: dto.defaultInboxView ?? 'active',
+        searchMode: dto.searchMode ?? 'semantic',
+        preferredCategoryIds: dto.preferredCategoryIds,
+        notifyEmail: dto.notifyEmail ?? true,
+        notifyPush: dto.notifyPush ?? true,
+        notifyWhatsApp: dto.notifyWhatsApp ?? true,
+        accentColor: dto.accentColor,
+      },
+      update: {
+        defaultInboxView: dto.defaultInboxView,
+        searchMode: dto.searchMode,
+        preferredCategoryIds: dto.preferredCategoryIds,
+        notifyEmail: dto.notifyEmail,
+        notifyPush: dto.notifyPush,
+        notifyWhatsApp: dto.notifyWhatsApp,
+        accentColor: dto.accentColor,
+      },
+    });
+  }
 
   @Get('categories')
   async getCategories() {
