@@ -52,16 +52,20 @@ const handlebars = __importStar(require("handlebars"));
 const puppeteer = __importStar(require("puppeteer"));
 const fs_1 = require("fs");
 const path_1 = require("path");
+const prisma_service_1 = require("../../infrastructure/prisma/prisma.service");
 let GenerateDocumentUseCase = class GenerateDocumentUseCase {
     ticketRepository;
-    constructor(ticketRepository) {
+    prisma;
+    constructor(ticketRepository, prisma) {
         this.ticketRepository = ticketRepository;
+        this.prisma = prisma;
     }
     async execute(ticketId) {
         const ticket = await this.ticketRepository.findById(ticketId);
         if (!ticket) {
             throw new common_1.NotFoundException('Ticket not found');
         }
+        const team = await this.prisma.teamSettings.findFirst();
         const templatePath = (0, path_1.join)(__dirname, '..', '..', 'infrastructure', 'documents', 'templates', 'ticket-report.hbs');
         const templateSource = (0, fs_1.readFileSync)(templatePath, 'utf8');
         const template = handlebars.compile(templateSource);
@@ -71,11 +75,17 @@ let GenerateDocumentUseCase = class GenerateDocumentUseCase {
             description: ticket.description,
             categoryName: ticket.categoryName,
             statusName: ticket.statusName,
+            priority: ticket.priority || 'BAJA',
             latitude: ticket.latitude,
             longitude: ticket.longitude,
-            hasLocation: !!(ticket.latitude && ticket.longitude),
-            currentDate: new Date().toLocaleString(),
-            userName: 'Sistema KONTROLIA',
+            locationLabel: ticket.locationLabel,
+            hasLocation: !!(ticket.locationLabel || (ticket.latitude && ticket.longitude)),
+            currentDate: new Date().toLocaleString('es-PE'),
+            userName: ticket.remitenteName || 'Sistema',
+            organizationName: team?.displayName || 'CONECTA',
+            groupIdentifier: team?.groupIdentifier || 'GRUPO-001',
+            logoUrl: team?.logoUrl,
+            primaryColor: team?.primaryColor || '#2563eb',
         };
         const html = template(data);
         const browser = await puppeteer.launch({
@@ -97,6 +107,6 @@ exports.GenerateDocumentUseCase = GenerateDocumentUseCase;
 exports.GenerateDocumentUseCase = GenerateDocumentUseCase = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, common_1.Inject)(ticket_repository_interface_1.ITicketRepository)),
-    __metadata("design:paramtypes", [Object])
+    __metadata("design:paramtypes", [Object, prisma_service_1.PrismaService])
 ], GenerateDocumentUseCase);
 //# sourceMappingURL=generate-document.use-case.js.map

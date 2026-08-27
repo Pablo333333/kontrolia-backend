@@ -11,5 +11,6 @@ export declare class UploadDocumentUseCase {
         ticketId: string;
         version?: number;
         isLatest?: boolean;
+        extractedText?: string;
     }): Promise<Document>;
 }

@@ -13,6 +13,16 @@ exports.CloudinaryService = void 0;
 const common_1 = require("@nestjs/common");
 const cloudinary_1 = require("cloudinary");
 const multer_storage_cloudinary_1 = require("multer-storage-cloudinary");
+const MAX_FILE_BYTES = 50 * 1024 * 1024;
+const ALLOWED_PREFIXES = [
+    'image/',
+    'video/',
+    'audio/',
+    'application/pdf',
+    'application/msword',
+    'application/vnd.',
+    'text/',
+];
 let CloudinaryService = class CloudinaryService {
     constructor() {
         if (process.env.CLOUDINARY_URL) {
@@ -28,18 +38,35 @@ let CloudinaryService = class CloudinaryService {
             }
         }
     }
-    getStorage(folder = 'kontrolia') {
+    getStorage(folder = 'conecta') {
         return new multer_storage_cloudinary_1.CloudinaryStorage({
             cloudinary: cloudinary_1.v2,
             params: {
                 folder: folder,
                 resource_type: 'auto',
-                public_id: (req, file) => {
-                    const randomName = Array(16).fill(null).map(() => (Math.round(Math.random() * 16)).toString(16)).join('');
+                public_id: (_req, _file) => {
+                    const randomName = Array(16)
+                        .fill(null)
+                        .map(() => Math.round(Math.random() * 16).toString(16))
+                        .join('');
                     return `${Date.now()}-${randomName}`;
                 },
             },
         });
+    }
+    getUploadOptions(folder = 'conecta') {
+        return {
+            storage: this.getStorage(folder),
+            limits: { fileSize: MAX_FILE_BYTES },
+            fileFilter: (_req, file, cb) => {
+                const mime = (file.mimetype || '').toLowerCase();
+                const ok = ALLOWED_PREFIXES.some((p) => mime.startsWith(p) || mime === p);
+                if (!ok) {
+                    return cb(new common_1.BadRequestException(`Tipo de archivo no permitido: ${mime}`), false);
+                }
+                cb(null, true);
+            },
+        };
     }
 };
 exports.CloudinaryService = CloudinaryService;

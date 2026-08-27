@@ -52,6 +52,9 @@ async function main() {
     await prisma.ticketHistory.deleteMany({});
     await prisma.auditLog.deleteMany({});
     await prisma.ticket.deleteMany({});
+    await prisma.workGroupTopic.deleteMany({});
+    await prisma.workGroupMember.deleteMany({});
+    await prisma.workGroup.deleteMany({});
     try {
         await prisma.tramiteHistory?.deleteMany({});
         await prisma.tramite?.deleteMany({});
@@ -61,6 +64,8 @@ async function main() {
     }
     await prisma.workflowState.deleteMany({});
     await prisma.category.deleteMany({});
+    await prisma.subcategory.deleteMany({});
+    await prisma.teamSettings.deleteMany({});
     await prisma.user.deleteMany({});
     console.log('--- Base de Datos Limpia ---');
     const password = await bcrypt.hash('1234', 10);
@@ -72,15 +77,27 @@ async function main() {
             role: 'ADMIN',
         },
     });
+    const supervisorUser = await prisma.user.create({
+        data: {
+            email: 'supervisor@test.com',
+            password,
+            name: 'Supervisor de Área',
+            role: 'SUPERVISOR',
+        },
+    });
     const operatorUser = await prisma.user.create({
         data: {
             email: 'operador@test.com',
             password,
             name: 'Operador de Campo',
-            role: 'SUPERVISOR',
+            role: 'OPERARIO',
         },
     });
-    console.log('Usuarios creados:', { admin: adminUser.email, operator: operatorUser.email });
+    console.log('Usuarios creados:', {
+        admin: adminUser.email,
+        supervisor: supervisorUser.email,
+        operator: operatorUser.email,
+    });
     const states = [
         { name: 'NUEVO', description: 'Ticket recién creado' },
         { name: 'EN_PROCESO', description: 'Ticket siendo atendido' },
@@ -99,6 +116,83 @@ async function main() {
     const createdCategories = await Promise.all(categories.map(cat => prisma.category.create({ data: cat })));
     const categoryMap = createdCategories.reduce((acc, c) => ({ ...acc, [c.name]: c.id }), {});
     console.log('Categorías creadas.');
+    const subcategories = [
+        { name: 'Coordinación', description: 'Chat y seguimiento operativo', categoryName: 'SOPORTE' },
+        { name: 'Documentos técnicos', description: 'Planos, informes y especificaciones', categoryName: 'OBRA' },
+        { name: 'Carta', description: 'Comunicaciones formales por carta', categoryName: 'DOCUMENTACIÓN' },
+        { name: 'Oficio', description: 'Oficios institucionales', categoryName: 'DOCUMENTACIÓN' },
+        { name: 'Convenios', description: 'Acuerdos y convenios interinstitucionales', categoryName: 'DOCUMENTACIÓN' },
+    ];
+    for (const sub of subcategories) {
+        await prisma.subcategory.create({
+            data: {
+                name: sub.name,
+                description: sub.description,
+                categoryId: categoryMap[sub.categoryName],
+            },
+        });
+    }
+    console.log('Subcategorías creadas.');
+    await prisma.teamSettings.create({
+        data: {
+            displayName: 'CONECTA Operaciones',
+            groupIdentifier: 'GRUPO-LIM-001',
+            logoUrl: null,
+            primaryColor: '#2563eb',
+        },
+    });
+    console.log('Configuración de equipo creada.');
+    const group1 = await prisma.workGroup.create({
+        data: {
+            name: 'Proyecto 1',
+            identifier: 'PROYECTO-1',
+            description: 'Grupo principal de operaciones Lima',
+            primaryColor: '#2563eb',
+            members: {
+                create: [
+                    { userId: adminUser.id, roleInGroup: 'LEAD' },
+                    { userId: supervisorUser.id, roleInGroup: 'LEAD' },
+                    { userId: operatorUser.id, roleInGroup: 'MEMBER' },
+                ],
+            },
+            topics: {
+                create: [
+                    { categoryId: categoryMap['SOPORTE'] },
+                    { categoryId: categoryMap['DOCUMENTACIÓN'] },
+                ],
+            },
+        },
+    });
+    const group2 = await prisma.workGroup.create({
+        data: {
+            name: 'Grupo 2',
+            identifier: 'GRUPO-2',
+            description: 'Segundo equipo de campo',
+            primaryColor: '#0f766e',
+            members: {
+                create: [
+                    { userId: adminUser.id, roleInGroup: 'LEAD' },
+                    { userId: operatorUser.id, roleInGroup: 'MEMBER' },
+                ],
+            },
+            topics: {
+                create: [{ categoryId: categoryMap['OBRA'] }],
+            },
+        },
+    });
+    await prisma.user.update({
+        where: { id: adminUser.id },
+        data: { activeWorkGroupId: group1.id, phone: '+51999999001' },
+    });
+    await prisma.user.update({
+        where: { id: supervisorUser.id },
+        data: { activeWorkGroupId: group1.id, phone: '+51999999002' },
+    });
+    await prisma.user.update({
+        where: { id: operatorUser.id },
+        data: { activeWorkGroupId: group1.id, phone: '+51999999003' },
+    });
+    console.log('Grupos de trabajo creados:', { group1: group1.identifier, group2: group2.identifier });
     const sampleTickets = [
         {
             title: 'Reparación de luminaria en Sector A',
@@ -149,6 +243,7 @@ async function main() {
                 priority: t.priority,
                 latitude: t.latitude,
                 longitude: t.longitude,
+                workGroupId: group1.id,
             },
         });
         await prisma.comment.create({

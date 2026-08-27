@@ -16,6 +16,7 @@ const catalog_module_1 = require("./presentation/catalog/catalog.module");
 const audit_module_1 = require("./presentation/audit/audit.module");
 const socket_module_1 = require("./infrastructure/socket/socket.module");
 const notification_module_1 = require("./infrastructure/notifications/notification.module");
+const work_groups_module_1 = require("./presentation/work-groups/work-groups.module");
 const prisma_module_1 = require("./infrastructure/prisma/prisma.module");
 const config_1 = require("@nestjs/config");
 let AppModule = class AppModule {
@@ -31,7 +32,8 @@ exports.AppModule = AppModule = __decorate([
             catalog_module_1.CatalogModule,
             audit_module_1.AuditPresentationModule,
             socket_module_1.SocketModule,
-            notification_module_1.NotificationModule
+            notification_module_1.NotificationModule,
+            work_groups_module_1.WorkGroupsModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

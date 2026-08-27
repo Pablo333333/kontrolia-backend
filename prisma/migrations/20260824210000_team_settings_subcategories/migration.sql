@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS "Subcategory" (
 
 CREATE TABLE IF NOT EXISTS "TeamSettings" (
     "id" TEXT NOT NULL,
-    "displayName" TEXT NOT NULL DEFAULT 'KONTROLIA',
+    "displayName" TEXT NOT NULL DEFAULT 'CONECTA',
     "groupIdentifier" TEXT NOT NULL DEFAULT 'GRUPO-001',
     "logoUrl" TEXT,
     "primaryColor" TEXT NOT NULL DEFAULT '#2563eb',

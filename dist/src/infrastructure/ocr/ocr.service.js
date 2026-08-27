@@ -66,6 +66,25 @@ let OcrService = OcrService_1 = class OcrService {
             return '';
         }
     }
+    async extractTextFromUrl(url) {
+        try {
+            this.logger.log(`Iniciando OCR remoto para: ${url}`);
+            const response = await fetch(url);
+            if (!response.ok) {
+                this.logger.error(`No se pudo descargar archivo para OCR: ${response.status}`);
+                return '';
+            }
+            const buffer = Buffer.from(await response.arrayBuffer());
+            const { data: { text } } = await Tesseract.recognize(buffer, 'spa', {
+                logger: m => this.logger.debug(m),
+            });
+            return text;
+        }
+        catch (error) {
+            this.logger.error(`Error durante OCR remoto: ${error.message}`);
+            return '';
+        }
+    }
 };
 exports.OcrService = OcrService;
 exports.OcrService = OcrService = OcrService_1 = __decorate([

@@ -83,7 +83,7 @@ export class DailyDigestService {
       });
 
       const body = [
-        `Resumen diario KONTROLIA — ${now.toLocaleDateString('es-PE')}`,
+        `Resumen diario CONECTA — ${now.toLocaleDateString('es-PE')}`,
         ``,
         `Tienes ${tickets.length} mensaje(s) pendiente(s) de respuesta.`,
         overdue.length ? `De ellos, ${overdue.length} ya están vencidos.` : '',

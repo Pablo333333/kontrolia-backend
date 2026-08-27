@@ -16,14 +16,20 @@ exports.NotificationController = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_auth_guard_1 = require("../../common/guards/jwt-auth.guard");
 const notification_service_1 = require("../../infrastructure/notifications/notification.service");
+const overdue_reminder_service_1 = require("../../infrastructure/notifications/overdue-reminder.service");
 let NotificationController = class NotificationController {
     notificationService;
-    constructor(notificationService) {
+    overdueReminderService;
+    constructor(notificationService, overdueReminderService) {
         this.notificationService = notificationService;
+        this.overdueReminderService = overdueReminderService;
     }
     async registerToken(req, token) {
         await this.notificationService.registerToken(req.user.userId, token);
         return { success: true, message: 'Push token registered successfully' };
+    }
+    async getReport() {
+        return this.overdueReminderService.checkOverdueAndPending();
     }
 };
 exports.NotificationController = NotificationController;
@@ -35,9 +41,16 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], NotificationController.prototype, "registerToken", null);
+__decorate([
+    (0, common_1.Get)('report'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], NotificationController.prototype, "getReport", null);
 exports.NotificationController = NotificationController = __decorate([
     (0, common_1.Controller)('notifications'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    __metadata("design:paramtypes", [notification_service_1.NotificationService])
+    __metadata("design:paramtypes", [notification_service_1.NotificationService,
+        overdue_reminder_service_1.OverdueReminderService])
 ], NotificationController);
 //# sourceMappingURL=notification.controller.js.map

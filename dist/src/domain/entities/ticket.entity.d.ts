@@ -8,11 +8,22 @@ export declare class Ticket {
     description?: string | null;
     latitude?: number | null;
     longitude?: number | null;
+    locationLabel?: string | null;
     workflowStateId: string;
     categoryId: string;
+    subcategoryId?: string | null;
     userId: string;
     priority: 'BAJA' | 'MEDIA' | 'URGENTE';
     isArchived: boolean;
+    destinatarioId?: string | null;
+    messageType?: string | null;
+    tramiteSubtype?: string | null;
+    responseUrgency?: string | null;
+    fechaLimite?: Date | null;
+    parentTicketId?: string | null;
+    rootTicketId?: string | null;
+    isContinuation?: boolean;
+    workGroupId?: string | null;
     createdAt: Date;
     updatedAt: Date;
     documents?: Document[];
@@ -20,5 +31,9 @@ export declare class Ticket {
     comments?: Comment[];
     statusName?: string | null;
     categoryName?: string | null;
-    userName?: string | null;
+    subcategoryName?: string | null;
+    destinatarioName?: string | null;
+    remitenteName?: string | null;
+    lastResponseContent?: string | null;
+    lastResponseAt?: Date | null;
 }

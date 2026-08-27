@@ -16,12 +16,15 @@ exports.CreateCommentUseCase = void 0;
 const common_1 = require("@nestjs/common");
 const comment_repository_interface_1 = require("../../domain/repositories/comment.repository.interface");
 const socket_gateway_1 = require("../../infrastructure/socket/socket.gateway");
+const ticket_workflow_service_1 = require("../services/ticket-workflow.service");
 let CreateCommentUseCase = class CreateCommentUseCase {
     commentRepository;
     socketGateway;
-    constructor(commentRepository, socketGateway) {
+    ticketWorkflowService;
+    constructor(commentRepository, socketGateway, ticketWorkflowService) {
         this.commentRepository = commentRepository;
         this.socketGateway = socketGateway;
+        this.ticketWorkflowService = ticketWorkflowService;
     }
     async execute(data) {
         const comment = await this.commentRepository.create({
@@ -29,6 +32,15 @@ let CreateCommentUseCase = class CreateCommentUseCase {
             userId: data.userId,
             ticketId: data.ticketId,
         });
+        if (this.ticketWorkflowService.isOkFinMessage(data.content)) {
+            await this.ticketWorkflowService.transitionToStateName(data.ticketId, 'CERRADO', data.userId);
+        }
+        else {
+            const currentName = (await this.ticketWorkflowService.getCurrentStateName(data.ticketId))?.toUpperCase();
+            if (currentName && !['CERRADO', 'COMPLETADO'].includes(currentName)) {
+                await this.ticketWorkflowService.transitionToStateName(data.ticketId, 'COMPLETADO', data.userId);
+            }
+        }
         this.socketGateway.server.to(data.ticketId).emit('messageReceived', comment);
         return comment;
     }
@@ -37,6 +49,7 @@ exports.CreateCommentUseCase = CreateCommentUseCase;
 exports.CreateCommentUseCase = CreateCommentUseCase = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, common_1.Inject)(comment_repository_interface_1.ICommentRepository)),
-    __metadata("design:paramtypes", [Object, socket_gateway_1.SocketGateway])
+    __metadata("design:paramtypes", [Object, socket_gateway_1.SocketGateway,
+        ticket_workflow_service_1.TicketWorkflowService])
 ], CreateCommentUseCase);
 //# sourceMappingURL=create-comment.use-case.js.map

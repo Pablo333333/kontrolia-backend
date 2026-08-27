@@ -9,14 +9,17 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CatalogModule = void 0;
 const common_1 = require("@nestjs/common");
 const catalog_controller_1 = require("./catalog.controller");
-const prisma_service_1 = require("../../infrastructure/prisma/prisma.service");
+const prisma_module_1 = require("../../infrastructure/prisma/prisma.module");
+const document_export_service_1 = require("../../infrastructure/documents/document-export.service");
 let CatalogModule = class CatalogModule {
 };
 exports.CatalogModule = CatalogModule;
 exports.CatalogModule = CatalogModule = __decorate([
     (0, common_1.Module)({
+        imports: [prisma_module_1.PrismaModule],
         controllers: [catalog_controller_1.CatalogController],
-        providers: [prisma_service_1.PrismaService],
+        providers: [document_export_service_1.DocumentExportService],
+        exports: [document_export_service_1.DocumentExportService],
     })
 ], CatalogModule);
 //# sourceMappingURL=catalog.module.js.map

@@ -14,7 +14,7 @@ export class EmailChannelService {
     const port = Number(this.config.get<string>('SMTP_PORT') || 587);
     const user = this.config.get<string>('SMTP_USER');
     const pass = this.config.get<string>('SMTP_PASS');
-    this.from = this.config.get<string>('SMTP_FROM') || user || 'kontrolia@localhost';
+    this.from = this.config.get<string>('SMTP_FROM') || user || 'conecta@localhost';
 
     if (host && user && pass) {
       this.transporter = nodemailer.createTransport({

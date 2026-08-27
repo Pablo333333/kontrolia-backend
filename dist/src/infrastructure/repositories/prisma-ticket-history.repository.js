@@ -42,7 +42,19 @@ let PrismaTicketHistoryRepository = class PrismaTicketHistoryRepository {
             },
             orderBy: { timestamp: 'desc' },
         });
-        return history.map((h) => new ticket_history_entity_1.TicketHistory(h));
+        const stateIds = [
+            ...new Set(history.flatMap(h => [h.oldStateId, h.newStateId].filter(Boolean))),
+        ];
+        const states = stateIds.length
+            ? await this.prisma.workflowState.findMany({ where: { id: { in: stateIds } } })
+            : [];
+        const stateById = Object.fromEntries(states.map(s => [s.id, s.name]));
+        return history.map((h) => new ticket_history_entity_1.TicketHistory({
+            ...h,
+            oldStateName: h.oldStateId ? stateById[h.oldStateId] : undefined,
+            newStateName: stateById[h.newStateId],
+            userName: h.user?.name ?? h.user?.email ?? undefined,
+        }));
     }
 };
 exports.PrismaTicketHistoryRepository = PrismaTicketHistoryRepository;

@@ -108,7 +108,7 @@ export class DocumentExportService {
       return {
         buffer: Buffer.from(header + rows, 'utf-8'),
         contentType: 'text/csv; charset=utf-8',
-        filename: `kontrolia-documentos-${Date.now()}.csv`,
+        filename: `conecta-documentos-${Date.now()}.csv`,
       };
     }
 
@@ -121,7 +121,7 @@ export class DocumentExportService {
         th,td{border:1px solid #ddd;padding:6px;text-align:left}
         th{background:#f3f4f6}
       </style></head><body>
-        <h1>Repositorio consolidado — KONTROLIA</h1>
+        <h1>Repositorio consolidado — CONECTA</h1>
         <p>Generado: {{generatedAt}} · {{count}} documento(s)</p>
         <table>
           <thead><tr><th>Nombre</th><th>Ticket</th><th>Categoría</th><th>Carpeta</th><th>Fecha</th></tr></thead>
@@ -163,7 +163,7 @@ export class DocumentExportService {
       return {
         buffer: Buffer.from(pdf),
         contentType: 'application/pdf',
-        filename: `kontrolia-documentos-${Date.now()}.pdf`,
+        filename: `conecta-documentos-${Date.now()}.pdf`,
       };
     } finally {
       await browser.close();

@@ -9,8 +9,10 @@ export declare class AuthController {
         name: string | null;
         role: import("@prisma/client").$Enums.Role;
         pushToken: string | null;
+        phone: string | null;
         createdAt: Date;
         updatedAt: Date;
+        activeWorkGroupId: string | null;
     }>;
     login(loginDto: LoginDto): Promise<{
         access_token: string;

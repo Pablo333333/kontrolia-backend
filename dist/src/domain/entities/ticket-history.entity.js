@@ -9,6 +9,9 @@ class TicketHistory {
     userId;
     timestamp;
     user;
+    oldStateName;
+    newStateName;
+    userName;
     constructor(props) {
         Object.assign(this, props);
     }

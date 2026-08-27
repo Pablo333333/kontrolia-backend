@@ -11,13 +11,28 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateTicketDto = void 0;
 const class_validator_1 = require("class-validator");
+var TicketPriority;
+(function (TicketPriority) {
+    TicketPriority["BAJA"] = "BAJA";
+    TicketPriority["MEDIA"] = "MEDIA";
+    TicketPriority["URGENTE"] = "URGENTE";
+})(TicketPriority || (TicketPriority = {}));
 class CreateTicketDto {
     title;
     description;
     latitude;
     longitude;
     categoryId;
+    subcategoryId;
     workflowStateId;
+    destinatarioId;
+    messageType;
+    tramiteSubtype;
+    responseUrgency;
+    fechaLimite;
+    priority;
+    locationLabel;
+    parentTicketId;
 }
 exports.CreateTicketDto = CreateTicketDto;
 __decorate([
@@ -47,7 +62,52 @@ __decorate([
 ], CreateTicketDto.prototype, "categoryId", void 0);
 __decorate([
     (0, class_validator_1.IsUUID)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateTicketDto.prototype, "subcategoryId", void 0);
+__decorate([
+    (0, class_validator_1.IsUUID)(),
     (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
 ], CreateTicketDto.prototype, "workflowStateId", void 0);
+__decorate([
+    (0, class_validator_1.IsUUID)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateTicketDto.prototype, "destinatarioId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateTicketDto.prototype, "messageType", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateTicketDto.prototype, "tramiteSubtype", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateTicketDto.prototype, "responseUrgency", void 0);
+__decorate([
+    (0, class_validator_1.IsDateString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateTicketDto.prototype, "fechaLimite", void 0);
+__decorate([
+    (0, class_validator_1.IsEnum)(TicketPriority),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateTicketDto.prototype, "priority", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateTicketDto.prototype, "locationLabel", void 0);
+__decorate([
+    (0, class_validator_1.IsUUID)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateTicketDto.prototype, "parentTicketId", void 0);
 //# sourceMappingURL=create-ticket.dto.js.map

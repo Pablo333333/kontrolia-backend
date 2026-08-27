@@ -32,7 +32,7 @@ export class CloudinaryService {
     }
   }
 
-  getStorage(folder: string = 'kontrolia') {
+  getStorage(folder: string = 'conecta') {
     return new CloudinaryStorage({
       cloudinary: cloudinary,
       params: {
@@ -51,7 +51,7 @@ export class CloudinaryService {
   }
 
   /** Multer options con límite de tamaño y tipos permitidos (incl. video). */
-  getUploadOptions(folder: string = 'kontrolia'): MulterOptions {
+  getUploadOptions(folder: string = 'conecta'): MulterOptions {
     return {
       storage: this.getStorage(folder),
       limits: { fileSize: MAX_FILE_BYTES },

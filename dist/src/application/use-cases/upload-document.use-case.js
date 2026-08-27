@@ -29,6 +29,7 @@ let UploadDocumentUseCase = class UploadDocumentUseCase {
             ticketId: data.ticketId,
             version: data.version || 1,
             isLatest: data.isLatest ?? true,
+            extractedText: data.extractedText,
         });
     }
 };

@@ -40,7 +40,7 @@ export class GenerateDocumentUseCase {
       hasLocation: !!((ticket as any).locationLabel || (ticket.latitude && ticket.longitude)),
       currentDate: new Date().toLocaleString('es-PE'),
       userName: (ticket as any).remitenteName || 'Sistema',
-      organizationName: team?.displayName || 'KONTROLIA',
+      organizationName: team?.displayName || 'CONECTA',
       groupIdentifier: team?.groupIdentifier || 'GRUPO-001',
       logoUrl: team?.logoUrl,
       primaryColor: team?.primaryColor || '#2563eb',

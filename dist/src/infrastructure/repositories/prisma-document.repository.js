@@ -27,6 +27,7 @@ let PrismaDocumentRepository = class PrismaDocumentRepository {
                 ticketId: data.ticketId,
                 version: data.version,
                 isLatest: data.isLatest,
+                extractedText: data.extractedText,
             },
         });
         return document;

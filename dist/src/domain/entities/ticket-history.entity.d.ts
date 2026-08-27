@@ -9,5 +9,8 @@ export declare class TicketHistory {
         name: string | null;
         email: string;
     };
+    oldStateName?: string;
+    newStateName?: string;
+    userName?: string;
     constructor(props: Partial<TicketHistory>);
 }

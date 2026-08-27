@@ -185,7 +185,7 @@ export class CatalogController {
     if (!settings) {
       settings = await this.prisma.teamSettings.create({
         data: {
-          displayName: 'KONTROLIA',
+          displayName: 'CONECTA',
           groupIdentifier: 'GRUPO-001',
           primaryColor: '#2563eb',
         },
@@ -226,7 +226,7 @@ export class CatalogController {
     }
     return this.prisma.teamSettings.create({
       data: {
-        displayName: dto.displayName || 'KONTROLIA',
+        displayName: dto.displayName || 'CONECTA',
         groupIdentifier: dto.groupIdentifier || 'GRUPO-001',
         logoUrl: dto.logoUrl,
         primaryColor: dto.primaryColor || '#2563eb',

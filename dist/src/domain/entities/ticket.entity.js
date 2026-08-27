@@ -10,11 +10,22 @@ class Ticket {
     description;
     latitude;
     longitude;
+    locationLabel;
     workflowStateId;
     categoryId;
+    subcategoryId;
     userId;
     priority;
     isArchived;
+    destinatarioId;
+    messageType;
+    tramiteSubtype;
+    responseUrgency;
+    fechaLimite;
+    parentTicketId;
+    rootTicketId;
+    isContinuation;
+    workGroupId;
     createdAt;
     updatedAt;
     documents;
@@ -22,7 +33,11 @@ class Ticket {
     comments;
     statusName;
     categoryName;
-    userName;
+    subcategoryName;
+    destinatarioName;
+    remitenteName;
+    lastResponseContent;
+    lastResponseAt;
 }
 exports.Ticket = Ticket;
 //# sourceMappingURL=ticket.entity.js.map

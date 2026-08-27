@@ -131,7 +131,7 @@ async function main() {
 
   await prisma.teamSettings.create({
     data: {
-      displayName: 'KONTROLIA Operaciones',
+      displayName: 'CONECTA Operaciones',
       groupIdentifier: 'GRUPO-LIM-001',
       logoUrl: null,
       primaryColor: '#2563eb',

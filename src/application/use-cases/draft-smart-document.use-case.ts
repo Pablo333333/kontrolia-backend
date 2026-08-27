@@ -28,7 +28,7 @@ export class DraftSmartDocumentUseCase {
     team: { displayName: string; groupIdentifier: string } | null,
     docDate: string,
   ): string {
-    const org = team?.displayName ?? 'KONTROLIA';
+    const org = team?.displayName ?? 'CONECTA';
     const groupId = team?.groupIdentifier ?? 'GRUPO-001';
     const subtype = dto.tramiteSubtype ? `\nTipo de trámite: ${dto.tramiteSubtype}` : '';
     const subcategory = dto.subcategoryName ? `\nSubcategoría: ${dto.subcategoryName}` : '';
