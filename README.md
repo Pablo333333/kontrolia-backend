@@ -1,98 +1,78 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# CONECTA API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Backend for **CONECTA**, an operations and institutional communications platform. Teams coordinate field and office work through messages (tickets), deadlines, documents, and a shared workflow. This service is the source of truth for those rules. The mobile app and the web app are clients of this API.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## What the system does
 
-## Description
+A user belongs to one or more **work groups**. Each group has members, a catalog of topics (categories), branding, and document folders. The user works inside an **active work group**.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+The unit of work is a **message** (stored as a ticket). A message can be a new topic or a **continuation** of an existing conversation. It carries a category, a recipient or a group-wide audience, a response deadline, a priority, optional location, attachments, and a workflow state.
 
-## Project setup
+There is no multi-step approval chain. Progress is driven by opening the message, replying, an explicit close, or a manager changing the state.
 
-```bash
-$ npm install
-```
+## Roles
 
-## Compile and run the project
+| Role | What they can do |
+| --- | --- |
+| **ADMIN** | Everything a supervisor can do, plus delete categories, verify the audit chain, trigger the daily digest, list every work group, and switch into a group they do not belong to. |
+| **SUPERVISOR** | Manage categories, folders, team branding, and work groups. Change a message state manually. See only groups they belong to. |
+| **OPERARIO** | Create and follow messages, comment, attach files, open, and close. Cannot change state manually or manage the catalog. |
 
-```bash
-# development
-$ npm run start
+Inside a group, membership is either **LEAD** or **MEMBER**. The person who creates a group becomes its lead. Leads receive the daily digest when they do not already have a personal one. Group role is not a second permission system for API routes.
 
-# watch mode
-$ npm run start:dev
+New registrations are created as **OPERARIO**. There is no API to promote a user to another role.
 
-# production mode
-$ npm run start:prod
-```
+## Message lifecycle
 
-## Run tests
+Seeded states: `NUEVO`, `EN_PROCESO`, `COMPLETADO`, `CANCELADO`, `CERRADO`.
 
-```bash
-# unit tests
-$ npm run test
+1. **Create.** The caller is the sender. The state is forced to `NUEVO` when that state exists. The message is stored in the sender's active work group. If it continues another message, it inherits the parent's group and is marked as a continuation.
+2. **Open.** Only `NUEVO` moves to `EN_PROCESO`. Opening any other state does nothing.
+3. **Reply.** A normal comment moves the message to `COMPLETADO`, unless it is already `COMPLETADO` or `CERRADO`. A comment whose text is `ok fin`, `okfin`, or starts with `ok fin ` moves it to `CERRADO`.
+4. **Close.** An explicit close moves the message to `CERRADO`. A message that is already closed cannot be closed again.
+5. **Manual status.** Only **ADMIN** and **SUPERVISOR** can set an arbitrary state, including `CANCELADO`.
 
-# e2e tests
-$ npm run test:e2e
+`CERRADO` is terminal for the workflow helper: later transitions out of it are refused. Closing also archives the message (`isArchived = true`).
 
-# test coverage
-$ npm run test:cov
-```
+Saving an AI-generated formal document posts it as a comment. That comment follows the same reply rules, so it can complete or close the message.
 
-## Deployment
+## How a message is classified
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+The client may send a message type and, for paperwork, a subtype:
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+- Types: coordination, paperwork (`TRAMITE`), technical documents, agreements.
+- Paperwork subtypes: letter (`CARTA`), official notice (`OFICIO`), request (`SOLICITUD`).
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+The API resolves the subcategory from an explicit id, then from those type patterns, then from the title, then from the first subcategory in the category. The stored title is composed as `CATEGORY — Subcategory: user title` when the category is not already in the title.
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+If a recipient is set and is not the sender, only that person is notified. If there is no recipient and the message belongs to a group, every other member of the group is notified.
 
-## Resources
+## Deadlines and digests
 
-Check out a few resources that may come in handy when working with NestJS:
+`fechaLimite` is the due date. Priority is `BAJA`, `MEDIA`, or `URGENTE`. The API stores response urgency (`MOMENTO`, `DIA`, and longer windows) but does not derive the due date itself; clients do that before create.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+An hourly job flags overdue messages (due date in the past, and not completed, closed, or cancelled) and messages due within 24 hours when priority is `MEDIA` or `URGENTE`.
 
-## Support
+Every day at 08:00 in `America/Lima`, each recipient (or the creator, when there is no recipient) gets a digest of pending work. Group leads get an extra digest when they do not already receive a personal one.
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## Documents, search, and AI
 
-## Stay in touch
+Attachments on a message are versioned by name: a new file with the same name bumps the version and marks the previous one as not latest. Images are OCR'd; the extracted text is searchable.
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+Search is literal (title, description, OCR text) or semantic (the query is expanded, then tickets are scored). Semantic is the default when the client does not send a mode.
 
-## License
+AI assists draft a formal document, summarize a thread, and classify an image. Channels that are not configured (email, WhatsApp, OpenAI) are skipped.
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+## Work groups and audit
+
+Managers create groups, add members, and assign topics. Everyone else can only activate a group they belong to. Team branding falls back to global settings when the user has no active group; the active group overrides those settings.
+
+Status changes, creates, and similar actions append an audit record. Each record stores a hash that chains to the previous hash for that entity. Verification checks that the chain is intact. Only an admin can run that check.
+
+## What this API does not own yet
+
+The database still has a separate paperwork entity (`Tramite`: request, letter, official notice, report). No module exposes it. In the product, paperwork is a **message** with type `TRAMITE` and a subtype. Ticket list and detail require a valid session and do not filter by work group.
+
+## Stack
+
+NestJS and TypeScript, organized as domain, application, infrastructure, and presentation. PostgreSQL via Prisma. JWT authentication. Socket.IO for live comments and status. Scheduled jobs for deadlines and digests. Cloudinary for files, Expo push, SMTP, and Twilio WhatsApp for alerts, OpenAI and Tesseract for AI and OCR, Puppeteer for PDF reports.
